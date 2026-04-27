@@ -213,6 +213,45 @@ export class SettingsDefaultsManager {
     return result;
   }
 
+  private static getDefaultDataDir(): string {
+    return join(homedir(), '.claude-mem');
+  }
+
+  /**
+   * Resolve the user settings path with the same precedence as the runtime:
+   * process.env.CLAUDE_MEM_DATA_DIR > default settings file's CLAUDE_MEM_DATA_DIR > hardcoded default.
+   */
+  static resolveUserSettingsPath(): string {
+    if (process.env.CLAUDE_MEM_DATA_DIR) {
+      return join(process.env.CLAUDE_MEM_DATA_DIR, 'settings.json');
+    }
+
+    const defaultSettingsPath = join(this.getDefaultDataDir(), 'settings.json');
+    try {
+      if (existsSync(defaultSettingsPath)) {
+        const settingsData = readFileSync(defaultSettingsPath, 'utf-8');
+        const settings = JSON.parse(settingsData);
+        const flatSettings = settings.env && typeof settings.env === 'object'
+          ? settings.env
+          : settings;
+        if (typeof flatSettings.CLAUDE_MEM_DATA_DIR === 'string' && flatSettings.CLAUDE_MEM_DATA_DIR.trim()) {
+          return join(flatSettings.CLAUDE_MEM_DATA_DIR, 'settings.json');
+        }
+      }
+    } catch {
+      // Fall back to the default location when the bootstrap settings file is missing or corrupt.
+    }
+
+    return defaultSettingsPath;
+  }
+
+  /**
+   * Load user settings from the resolved claude-mem settings path.
+   */
+  static loadUserSettings(): SettingsDefaults {
+    return this.loadFromFile(this.resolveUserSettingsPath());
+  }
+
   /**
    * Load settings from file with fallback to defaults
    * Returns merged settings with proper priority: process.env > settings file > defaults

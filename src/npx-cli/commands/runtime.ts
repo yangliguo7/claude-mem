@@ -161,10 +161,9 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve port via SettingsDefaultsManager so CLAUDE_MEM_WORKER_PORT env
-  // takes priority and the per-UID default (37700 + uid % 100) is used
-  // otherwise. Required for multi-account isolation (#2101).
-  const workerPort = SettingsDefaultsManager.get('CLAUDE_MEM_WORKER_PORT');
+  // Resolve port from the user's persisted settings file so search talks to
+  // the same worker that hooks and the daemon already use.
+  const workerPort = SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT;
   const searchUrl = `http://127.0.0.1:${workerPort}/api/search?query=${encodeURIComponent(query)}`;
 
   let response: Response;

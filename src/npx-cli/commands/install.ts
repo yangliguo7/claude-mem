@@ -463,7 +463,7 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
     // Shut down any running worker FIRST so it isn't holding open file
     // handles when we overwrite plugin files (#2106 item 3). Best-effort:
     // helper swallows its own errors when no worker is running.
-    const installPort = SettingsDefaultsManager.get('CLAUDE_MEM_WORKER_PORT');
+    const installPort = SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT;
     try {
       const result = await shutdownWorkerAndWait(installPort, 10000);
       if (result.workerWasRunning) {
@@ -557,10 +557,9 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
     summaryLines.forEach(l => console.log(`  ${l}`));
   }
 
-  // Resolve port via SettingsDefaultsManager so CLAUDE_MEM_WORKER_PORT env
-  // takes priority and the per-UID default (37700 + uid % 100) is used
-  // otherwise. Required for multi-account isolation (#2101).
-  const workerPort = SettingsDefaultsManager.get('CLAUDE_MEM_WORKER_PORT');
+  // Resolve port from the user's persisted settings file so install status
+  // reports the same worker endpoint the rest of claude-mem uses.
+  const workerPort = SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT;
 
   // Probe the actually-bound port (#2106 item 6). smart-install just
   // started the worker; if it's reachable we report the real port the

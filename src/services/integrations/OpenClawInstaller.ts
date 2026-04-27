@@ -306,10 +306,12 @@ function copyPluginFilesAndRegister(
     'utf-8',
   );
 
-  // Resolve port via SettingsDefaultsManager so CLAUDE_MEM_WORKER_PORT env
-  // takes priority and the per-UID default (37700 + uid % 100) is used
-  // otherwise. Required for multi-account isolation (#2101).
-  const workerPort = SettingsDefaultsManager.getInt('CLAUDE_MEM_WORKER_PORT');
+  // Resolve port from the user's persisted settings file so OpenClaw registers
+  // the same worker endpoint the rest of claude-mem uses.
+  const workerPort = parseInt(
+    SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT,
+    10,
+  );
   registerPluginInOpenClawConfig(workerPort);
   console.log(`  Registered in openclaw.json`);
 

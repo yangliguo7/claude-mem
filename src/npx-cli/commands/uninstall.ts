@@ -234,15 +234,13 @@ export async function runUninstallCommand(): Promise<void> {
     }
   }
 
-  // Stop the worker and wait for it to exit before deleting files.
-  // Resolve port via SettingsDefaultsManager so CLAUDE_MEM_WORKER_PORT env
-  // takes priority and the per-UID default (37700 + uid % 100) is used
-  // otherwise. Required for multi-account isolation (#2101).
+  // Stop the worker using the port from the user's persisted settings file so
+  // uninstall targets the same daemon hooks and the viewer use.
   //
   // The worker's graceful shutdown also stops chroma-mcp via
   // GracefulShutdown -> ChromaMcpManager.stop(), so this single call
   // cascades to the chroma-mcp subprocess as well.
-  const workerPort = SettingsDefaultsManager.get('CLAUDE_MEM_WORKER_PORT');
+  const workerPort = SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT;
   try {
     const result = await shutdownWorkerAndWait(workerPort, 10000);
     if (result.workerWasRunning) {
