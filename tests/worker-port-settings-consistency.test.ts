@@ -124,6 +124,46 @@ describe('Worker port settings consistency', () => {
     );
   });
 
+  it('resolves nested env data dir overrides from the bootstrap settings file', () => {
+    const defaultDataDir = join(tempDir, '.claude-mem');
+    const bootstrapSettingsPath = join(defaultDataDir, 'settings.json');
+    const redirectedDataDir = join(tempDir, 'redirected-data');
+
+    mkdirSync(defaultDataDir, { recursive: true });
+    mkdirSync(redirectedDataDir, { recursive: true });
+    writeFileSync(
+      bootstrapSettingsPath,
+      JSON.stringify({ env: { CLAUDE_MEM_DATA_DIR: redirectedDataDir } }, null, 2),
+      'utf-8',
+    );
+
+    defaultDataDirSpy = spyOn(
+      SettingsDefaultsManager as unknown as { getDefaultDataDir: () => string },
+      'getDefaultDataDir',
+    ).mockReturnValue(defaultDataDir);
+
+    expect(SettingsDefaultsManager.resolveUserSettingsPath()).toBe(
+      join(redirectedDataDir, 'settings.json'),
+    );
+  });
+
+  it('falls back to the default settings path when the bootstrap settings file is corrupt', () => {
+    const defaultDataDir = join(tempDir, '.claude-mem');
+    const bootstrapSettingsPath = join(defaultDataDir, 'settings.json');
+
+    mkdirSync(defaultDataDir, { recursive: true });
+    writeFileSync(bootstrapSettingsPath, '{not valid json', 'utf-8');
+
+    defaultDataDirSpy = spyOn(
+      SettingsDefaultsManager as unknown as { getDefaultDataDir: () => string },
+      'getDefaultDataDir',
+    ).mockReturnValue(defaultDataDir);
+
+    expect(SettingsDefaultsManager.resolveUserSettingsPath()).toBe(
+      bootstrapSettingsPath,
+    );
+  });
+
   it('loadUserSettings reads the resolved user settings file', () => {
     const defaultDataDir = join(tempDir, '.claude-mem');
     const bootstrapSettingsPath = join(defaultDataDir, 'settings.json');
@@ -148,9 +188,7 @@ describe('Worker port settings consistency', () => {
       'getDefaultDataDir',
     ).mockReturnValue(defaultDataDir);
 
-    expect(SettingsDefaultsManager.loadFromFile(
-      SettingsDefaultsManager.resolveUserSettingsPath(),
-    ).CLAUDE_MEM_WORKER_PORT).toBe('37777');
+    expect(SettingsDefaultsManager.loadUserSettings().CLAUDE_MEM_WORKER_PORT).toBe('37777');
   });
 
   it('shared worker utils resolve settings through loadUserSettings', () => {
